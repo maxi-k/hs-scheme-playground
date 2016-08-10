@@ -4,6 +4,7 @@ import LispData
 eval :: LispVal -> LispVal
 eval (List [Atom "quote", val]) = val
 eval (List (Atom func : args)) = apply func $ map eval args
+eval val@(Atom _) = val
 eval val@(String _) = val
 eval val@(Number _) = val
 eval val@(Decimal _) = val
@@ -15,7 +16,6 @@ eval val@(DottedList _ _) = val
 apply :: String -> [LispVal] -> LispVal
 apply func args = maybe (Bool False) ($ args) $ lookup func primitives
 
-
 primitives :: [(String, [LispVal] -> LispVal)]
 primitives = [("+", numericBinop (+)),
               ("-", numericBinop (-)),
@@ -24,7 +24,6 @@ primitives = [("+", numericBinop (+)),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
               ("remainder", numericBinop rem)]
-
 
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
