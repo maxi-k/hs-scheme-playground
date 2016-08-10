@@ -2,8 +2,8 @@ module Parser (
   spaces,
   symbol,
   readExpr,
-  parseString,
-  parseAtom ) where
+  parseExpr
+  ) where
 import LispData
 import Control.Monad
 import Text.ParserCombinators.Parsec hiding (spaces)
@@ -33,6 +33,7 @@ parseString = do char '"'
                  x <- many character
                  char '"'
                  return $ String $ concat x
+
 
 parseAtom :: Parser LispVal
 parseAtom =  do first <- letter <|> symbol

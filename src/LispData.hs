@@ -1,5 +1,4 @@
 module LispData where
-import System.Environment
 
 data LispVal = Atom String
   | List [ LispVal ]
