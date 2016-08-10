@@ -1,7 +1,4 @@
 module Parser (
-  spaces,
-  symbol,
-  readExpr,
   parseExpr
   ) where
 import LispData
@@ -15,24 +12,24 @@ symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 spaces :: Parser ()
 spaces = skipMany1 space
 
-readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of
-                   Left err -> "Not found: " ++ show err
-                   Right val -> "Found value " ++ show val
+parseExpr :: Parser LispVal
+parseExpr = parseAtom
+            <|> parseString
+            <|> parseDecimal
+            <|> parseNumber
+            <|> parseChar
+            <|> parseQuoted
+            <|> parseListVal
 
-parseExpr = parseAtom <|> parseString <|> parseDecimal <|> parseNumber <|> parseChar
-
-character :: Parser String
-character = fmap return (noneOf "\"") <|> escaped
-  where escaped = do c <- char '\\'
-                     e <- oneOf "\\\"nrt"
-                     return [c, e]
+character :: Parser Char
+character = (noneOf "\"") <|> escaped
+  where escaped = char '\\' >> oneOf "\\\"nrt"
 
 parseString :: Parser LispVal
 parseString = do char '"'
                  x <- many character
                  char '"'
-                 return $ String $ concat x
+                 return $ String x
 
 
 parseAtom :: Parser LispVal
@@ -52,11 +49,11 @@ parseNumber = (many1 (char 'x' <|> digit)) >>= (return . Number . parseNumberFn)
                          otherwise      -> fst $ head $ readDec s
 
 decimal :: Parser String
+-- decimal = many digit >> char '.' >> many1 digit
 decimal = try $ do d <- many digit
                    p <- char '.'
                    a <- many1 digit
                    return $ d ++ [p] ++ a
-
 
 parseDecimal :: Parser LispVal
 parseDecimal = decimal >>= (return . Decimal . parseFn)
@@ -67,3 +64,22 @@ parseChar = do char '\\'
                char '#'
                x <- character
                return $ Character x
+
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do head <- endBy parseExpr spaces
+                     tail <- char '.' >> spaces >> parseExpr
+                     return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do char '\''
+                 x <- parseExpr
+                 return $ List [Atom "quote", x]
+
+parseListVal :: Parser LispVal
+parseListVal = do char '('
+                  x <- try parseList <|> parseDottedList
+                  char ')'
+                  return x
